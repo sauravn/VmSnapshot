@@ -1,6 +1,7 @@
 from novaclient import client as nv_client
 from cinderclient.v2 import client as cin_client
 import time
+import os
 from optparse import OptionParser
 
 
@@ -43,7 +44,7 @@ class VmSnapshot(object):
 		Return the cinder client
 		"""
 		try:
-			self.cinder = cin_client.Client(self.user, self.project, self.project, self.auth_url, service_type="volume")
+			self.cinder = cin_client.Client(self.user, self.password, self.project, self.auth_url, service_type="volume")
 			self.cinder.authenticate()
 		except Exception as e:
 			print "Error creating/authenticating cinder client: %s" % e	
@@ -158,14 +159,14 @@ class DeleteSnapshots(VmSnapshot):
 		for id in ids:
 			self.delete_volume(id)
 
-	def delete_expired(self, span=4):
+	def delete_expired(self, span):
 		"""
 		Deletes the expired images and volumes
 		@args:
 			span: Total no of days to expire
 		"""
-		self.sort_ids.get_expired_images()
-		self.sort_ids.get_expired_volumes()
+		self.sort_ids.get_expired_images(span=span)
+		self.sort_ids.get_expired_volumes(span=span)
 		self.delete_all_images(self.sort_ids.expired_image_ids)
 		self.delete_all_volumes(self.sort_ids.expired_volume_ids)
 
@@ -184,14 +185,14 @@ class SortExpired(object):
 
 	def group_images(self):
 		"""
-		Groups images of a particular VM
+		Group images of a particular VM
 		"""
 		images = {entity.name: entity.id for entity in self.images if len(entity.name.split("_"))==3}
 		self.img_gps = self.make_groups(images)
 
 	def group_volumes(self):
 		"""
-		Groups images of a particular VM
+		Group volumes of a particular VM
 		"""
 		volumes = {entity.display_name.split()[2:][0]: entity.id for entity in self.volumes if len(entity.display_name.split("_"))==3}
 		self.vol_gps = self.make_groups(volumes)	
@@ -240,9 +241,11 @@ class SortExpired(object):
 			total_seconds: total no of seconds to expire
 			current_time: current epoch time
 		"""
+		all_expired_ids = []
 		for id in val:
 			expired_ids = [i[1] for i in val[id] if self.compare_times(total_seconds, current_time, int(i[0].split("_")[2]))]
-		return expired_ids
+			all_expired_ids += expired_ids
+		return all_expired_ids
 
 	def compare_times(self, diff, current, prev):
 		"""
@@ -260,7 +263,7 @@ class SortExpired(object):
 
 def main():
 	parser = OptionParser()
-	parser.add_option("-d", "--delete-span", dest="span",
+	parser.add_option("-d", "--delete-span", dest="span", type="float",
 						help="Total no of days for retaining the backup")
 	(options, args) = parser.parse_args()
 	if (options.span == None):
@@ -268,24 +271,23 @@ def main():
 		exit(0)
 	else:
 		span = options.span
+	user = os.getenv("OS_USERNAME", None)
+	password = os.getenv("OS_PASSWORD", None)
+	project = os.getenv("OS_TENANT_NAME", None)
+	auth_url = os.getenv("OS_AUTH_URL", None)
 	args = []
 	kwargs = {}
 	kwargs.update({"version": 2})
-	kwargs.update({"user": "snap"})
-	kwargs.update({"password": "snap"})
-	kwargs.update({"project": "snap"})
-	# auth_url = raw_input("Provide auth url > ")
-	kwargs.update({"auth_url": "http://10.100.40.12:5000/v2.0"})
+	kwargs.update({"user": user})
+	kwargs.update({"password": password})
+	kwargs.update({"project": project})
+	kwargs.update({"auth_url": auth_url})
 	create_obj = CreateSnapshots(*args, **kwargs)
 	create_obj.create_all_vms_snapshot()
 	time.sleep(30)
 	delete_obj = DeleteSnapshots(*args, **kwargs)
-	delete_obj.delete_expired()
+	delete_obj.delete_expired(span)
 
 if __name__ == '__main__':
 	main()
 
-	# ':'.join(vol[0].created_at.split(":")[:2])
-	# dr = datetime.strptime("2017-03-07T11:19", "20%y-%m-%dT%H:%M")
-	# dr.strftime("%s")
-	# int(time.time())- int(dr.strftime("%s"))
