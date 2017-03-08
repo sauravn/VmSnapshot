@@ -8,7 +8,8 @@ a Vm creates image and volume snapshot.
 Nova client is used to delete the image snapshot and cinder client is
 used to delete the volume snapshot.
 
-HOW TO USE:
-1) source overcloudrc
-2) python nova_vm_snapshot.py --delete-span 4
+HOW TO USE;
+
+source overcloudrc
+python nova_vm_snapshot.py --delete-span 4
 
