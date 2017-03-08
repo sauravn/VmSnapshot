@@ -158,17 +158,16 @@ class DeleteSnapshots(VmSnapshot):
 		for id in ids:
 			self.delete_volume(id)
 
-	def delete_expired_images(self, span=4):
+	def delete_expired(self, span=4):
 		"""
 		Deletes the expired images and volumes
 		@args:
 			span: Total no of days to expire
 		"""
-		self.sort_ids.get_expired_images(span=4)
-		self.sort_ids.get_expired_volumes(span=4)
+		self.sort_ids.get_expired_images()
+		self.sort_ids.get_expired_volumes()
 		self.delete_all_images(self.sort_ids.expired_image_ids)
 		self.delete_all_volumes(self.sort_ids.expired_volume_ids)
-
 
 
 class SortExpired(object):
@@ -218,7 +217,7 @@ class SortExpired(object):
 			span: No of days for backup
 		"""
 		self.group_images()
-		total_seconds = span*2
+		total_seconds = span*24*60*60
 		current_time = time.time()
 		self.expired_image_ids = self.sort_expired(self.img_gps, total_seconds, current_time)
 
@@ -229,7 +228,7 @@ class SortExpired(object):
 			span: No of days for backup
 		"""
 		self.group_volumes()
-		total_seconds = span*2
+		total_seconds = span*24*60*60
 		current_time = time.time()
 		self.expired_volume_ids = self.sort_expired(self.vol_gps, total_seconds, current_time)		
 
@@ -281,7 +280,7 @@ def main():
 	create_obj.create_all_vms_snapshot()
 	time.sleep(30)
 	delete_obj = DeleteSnapshots(*args, **kwargs)
-	delete_obj.delete_expired_images()
+	delete_obj.delete_expired()
 
 if __name__ == '__main__':
 	main()
