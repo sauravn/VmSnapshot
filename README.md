@@ -11,5 +11,6 @@ used to delete the volume snapshot.
 HOW TO USE;
 
 source overcloudrc
+
 python nova_vm_snapshot.py --delete-span 4
 
