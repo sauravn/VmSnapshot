@@ -102,6 +102,7 @@ class DeleteSnapshots(VmSnapshot):
 		super(self.__class__, self).__init__(*args, **kwargs)
 		self.get_all_images()
 		self.get_all_volumes()
+		self.sort_ids = SortExpired(self.image_snapshots, self.vol_snapshots)
 
 	def get_all_images(self):
 		"""
@@ -126,7 +127,7 @@ class DeleteSnapshots(VmSnapshot):
 		try:
 			self.nova.images.delete(id)
 		except Exception as e:
-			"Error deleting snapshot: %s for vm: %s " %(id)
+			"Error deleting snapshot: %s " %(id)
 
 	def delete_volume(self, id):
 		"""
@@ -137,7 +138,7 @@ class DeleteSnapshots(VmSnapshot):
 		try:
 			self.cinder.volumes.api.volume_snapshots.delete(id)
 		except Exception as e:
-			"Error deleting snapshot: %s for vm: %s " %(id)
+			"Error deleting snapshot: %s " %(id)
 
 	def delete_all_images(self,ids):
 		"""
@@ -157,6 +158,17 @@ class DeleteSnapshots(VmSnapshot):
 		for id in ids:
 			self.delete_volume(id)
 
+	def delete_expired_images(self, span=4):
+		"""
+		Deletes the expired images and volumes
+		@args:
+			span: Total no of days to expire
+		"""
+		self.sort_ids.get_expired_images(span=4)
+		self.sort_ids.get_expired_volumes(span=4)
+		self.delete_all_images(self.sort_ids.expired_image_ids)
+		self.delete_all_volumes(self.sort_ids.expired_volume_ids)
+
 
 
 class SortExpired(object):
@@ -171,29 +183,57 @@ class SortExpired(object):
 		self.images = images
 		self.volumes = volumes
 
-	def get_retarded_images(self, span=4):
+	def group_images(self):
+		"""
+		Groups images of a particular VM
+		"""
+		images = {entity.name: entity.id for entity in self.images if len(entity.name.split("_"))==3}
+		self.img_gps = self.make_groups(images)
+
+	def group_volumes(self):
+		"""
+		Groups images of a particular VM
+		"""
+		volumes = {entity.display_name.split()[2:][0]: entity.id for entity in self.volumes if len(entity.display_name.split("_"))==3}
+		self.vol_gps = self.make_groups(volumes)	
+
+	def make_groups(self, val):
+		"""
+		Groups the same entities
+		"""
+		vm_gp = {}
+		for name, id in val.items():
+			id_limit = name.split("_")[1]
+			if id_limit in vm_gp.keys():
+				vm_gp[id_limit].append((name,id))
+			else:
+				vm_gp.update({id_limit:[(name,id)]})
+		print "updated dictionary for entity is: %s" % vm_gp
+		return vm_gp		
+
+	def get_expired_images(self, span=4):
 		"""
 		Returns all the images which are before span days
 		@args:
 			span: No of days for backup
 		"""
 		self.group_images()
-		total_seconds = span*24*60*60
+		total_seconds = span*2
 		current_time = time.time()
-		self.expired_image_ids = self.sort_retarded(self.img_gps, total_seconds, current_time)
+		self.expired_image_ids = self.sort_expired(self.img_gps, total_seconds, current_time)
 
-	def get_retarded_volumes(self, span=4):
+	def get_expired_volumes(self, span=4):
 		"""
 		Returns all the images which are before span days
 		@args:
 			span: No of days for backup
 		"""
 		self.group_volumes()
-		total_seconds = span*24*60*60
+		total_seconds = span*2
 		current_time = time.time()
-		self.expired_volume_ids = self.sort_retarded(self.img_gps, total_seconds, current_time)		
+		self.expired_volume_ids = self.sort_expired(self.vol_gps, total_seconds, current_time)		
 
-	def sort_retarded(self, val, total_seconds, current_time):
+	def sort_expired(self, val, total_seconds, current_time):
 		"""
 		Sorts expired images and volumes
 		@args:
@@ -218,34 +258,6 @@ class SortExpired(object):
 		else:
 			return False
 
-	def group_images(self):
-		"""
-		Groups images of a particular VM
-		"""
-		images = {entity.name: entity.id for entity in self.images if "snap_" in entity.name}
-		self.img_gps = self.make_groups(volumes)
-
-	def group_volumes(self):
-		"""
-		Groups images of a particular VM
-		"""
-		volumes = {entity.display_name.split()[2:][0]: entity.id for entity in self.volumes if "snap_" in entity.display_name}
-		self.vol_gps = self.make_groups(volumes)	
-
-	def make_groups(self, val):
-		"""
-		Groups the same entities
-		"""
-		vm_gp = {}
-		for name, id in val.items():
-			id_limit = name.split("_")[1]
-			if id_limit in vm_gp.keys():
-				vm_gp[id_limit].append((name,id))
-			else:
-				vm_gp.update({id_limit:[(name,id)]})
-		print "updated dictionary for entity is: %s" % vm_gp
-		return vm_gp
-
 
 def main():
 	parser = OptionParser()
@@ -263,14 +275,13 @@ def main():
 	kwargs.update({"user": "snap"})
 	kwargs.update({"password": "snap"})
 	kwargs.update({"project": "snap"})
-	auth_url = raw_input("Provide auth url > ")
-	kwargs.update({"auth_url": auth_url})
+	# auth_url = raw_input("Provide auth url > ")
+	kwargs.update({"auth_url": "http://10.100.40.12:5000/v2.0"})
 	create_obj = CreateSnapshots(*args, **kwargs)
 	create_obj.create_all_vms_snapshot()
 	time.sleep(30)
 	delete_obj = DeleteSnapshots(*args, **kwargs)
-	delete_obj.delete_all_images()
-	delete_obj.delete_all_volumes()
+	delete_obj.delete_expired_images()
 
 if __name__ == '__main__':
 	main()
