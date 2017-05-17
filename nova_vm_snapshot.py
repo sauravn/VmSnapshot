@@ -88,7 +88,7 @@ class CreateSnapshots(VmSnapshot):
 			snap_id = self.nova.servers.create_image(vm, snap_name)
 			return snap_id
 		except Exception as e:
-			print "Error making %s snaphot! %s" % (vm.name, e)
+			print "Error making %s snapshot! %s" % (vm.name, e)
 
 
 class DeleteSnapshots(VmSnapshot):
@@ -208,7 +208,6 @@ class SortExpired(object):
 				vm_gp[id_limit].append((name,id))
 			else:
 				vm_gp.update({id_limit:[(name,id)]})
-		print "updated dictionary for entity is: %s" % vm_gp
 		return vm_gp		
 
 	def get_expired_images(self, span=4):
@@ -283,10 +282,15 @@ def main():
 	kwargs.update({"project": project})
 	kwargs.update({"auth_url": auth_url})
 	create_obj = CreateSnapshots(*args, **kwargs)
-	create_obj.create_all_vms_snapshot()
-	time.sleep(30)
-	delete_obj = DeleteSnapshots(*args, **kwargs)
-	delete_obj.delete_expired(span)
+        while True:
+            print "Taking the snapshots for images and volumes"
+	    create_obj.create_all_vms_snapshot()
+	    time.sleep(30)
+            print "Deleting the Expired snapshots!!!"
+	    delete_obj = DeleteSnapshots(*args, **kwargs)
+	    delete_obj.delete_expired(span)
+            print "Waiting for the whole day to recreate the snapshots..."
+            time.sleep(24*60*60)
 
 if __name__ == '__main__':
 	main()
