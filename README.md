@@ -1,4 +1,4 @@
-# VmSnapshot
+# VMSnapshot
 Create/Delete VM snapshot in Openstack
 
 This is a simple script to create/delete VM snapshots using nova and
@@ -12,5 +12,5 @@ HOW TO USE;
 
 source overcloudrc
 
-python nova_vm_snapshot.py --delete-span 4
+python nova_vm_snapshot.py --delete-span 4 |tee /var/run/snapshot.log
 
