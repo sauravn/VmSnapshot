@@ -1,2 +1,6 @@
-fio --ioengine=rbd --bs=4k --name=test  --invalidate=0 --readwrite=readwrite --iodepth=1  --numjobs=1 --rbdname=testfio --clientname=admin  --pool=rbd --output=test_withcache.log --rwmixread=80  --rwmixwrite=20
-
+export OS_USERNAME=admin
+export OS_PROJECT_NAME=admin
+export OS_PASSWORD=redhat
+export OS_AUTH_URL=http://serverb:5000/v2.0/
+export OS_REGION_NAME=RegionOne
+export PS1='[\u@\h \W(keystone_admin)]\$ '
