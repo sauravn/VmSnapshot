@@ -1,11 +1,6 @@
-[rbd]
-backend_host = rbd:volumes
-volume_driver=cinder.volume.drivers.rbd.RBDDriver
-rbd_ceph_conf=/etc/ceph/ceph.conf
-rbd_pool=volumes
-rbd_user=volumes
-rbd_secret_uuid= bdbed7ec-9c95-42d9-8f52-bfc4b5baaa8e
-rbd_max_clone_depth=5
-rbd_store_chunk_size=4
-rbd_flatten_volume_from_snapshot=false
-rados_connect_timeout=-1
+<secret ephemeral="no" private="no">
+  <uuid> bdbed7ec-9c95-42d9-8f52-bfc4b5baaa8e </uuid>
+    <usage type="ceph">
+      <name>client.volumes secret</name>
+    </usage>
+</secret>
