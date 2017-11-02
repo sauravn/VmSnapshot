@@ -1,6 +1,7 @@
-<secret ephemeral="no" private="no">
-  <uuid> bdbed7ec-9c95-42d9-8f52-bfc4b5baaa8e </uuid>
-    <usage type="ceph">
-      <name>client.volumes secret</name>
-    </usage>
-</secret>
+rgw_keystone_url=http://serverb:35357
+rgw_keystone_admin_user=admin
+rgw_keystone_admin_password=redhat
+rgw_keystone_admin_tenant=admin
+rgw_keystone_accepted_role=admin Member swiftoperator
+rgw_keystone_token_cache_size=200
+rgw_keystone_revocation_interval=300
